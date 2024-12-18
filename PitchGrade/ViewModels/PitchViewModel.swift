@@ -129,7 +129,11 @@ class PitchViewModel: ObservableObject {
             let analysis = try await OpenAIService().analyzePitchText(pitchIdea.pitchText)
             print("DEBUG: PitchViewModel - Received analysis: \(analysis)")
             
-            self.pitchAnalysis = analysis
+            await MainActor.run {
+                print("DEBUG: PitchViewModel - Setting analysis in view model")
+                self.pitchAnalysis = analysis
+                print("DEBUG: PitchViewModel - Analysis set: \(self.pitchAnalysis != nil)")
+            }
         } catch {
             print("DEBUG: PitchViewModel - Analysis error: \(error.localizedDescription)")
         }

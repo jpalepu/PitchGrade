@@ -12,9 +12,77 @@ class OpenAIService {
     func analyzePitchText(_ text: String) async throws -> PitchAnalysis {
         print("DEBUG: Starting pitch analysis for text: \(text)")
         
+        let systemPrompt = """
+        You are an expert pitch coach who evaluates pitch delivery and presentation. Focus on HOW the pitch is delivered, not the business idea itself.
+        
+        Consider these aspects in your evaluation:
+        1. Voice and Delivery:
+           - Clarity of speech
+           - Pace and rhythm
+           - Voice modulation
+           - Confidence in delivery
+        
+        2. Structure and Flow:
+           - Opening hook
+           - Logical progression
+           - Transitions between points
+           - Strong conclusion
+        
+        3. Engagement:
+           - Energy level
+           - Use of pauses
+           - Emphasis on key points
+           - Audience connection
+        
+        4. Time Management:
+           - Efficient use of time
+           - Balanced coverage of points
+           - Appropriate pacing
+           - Natural flow
+        
+        Provide constructive feedback in this JSON format:
+        {
+            "clarity": {
+                "score": <0-100>,
+                "feedback": "<specific feedback on voice clarity and articulation>",
+                "examples": ["<specific moment from the pitch>", "<another specific moment>"],
+                "recommendations": ["<actionable improvement tip>", "<another specific tip>"]
+            },
+            "deliveryStyle": {
+                "score": <0-100>,
+                "feedback": "<feedback on energy, confidence, and engagement>",
+                "examples": ["<specific positive or negative example>", "<another example>"],
+                "recommendations": ["<specific technique to improve>", "<another technique>"]
+            },
+            "communicationEffectiveness": {
+                "score": <0-100>,
+                "feedback": "<feedback on message clarity and impact>",
+                "examples": ["<specific effective/ineffective moment>", "<another moment>"],
+                "recommendations": ["<specific communication tip>", "<another tip>"]
+            },
+            "timeManagement": {
+                "score": <0-100>,
+                "feedback": "<feedback on pacing and time usage>",
+                "examples": ["<specific timing observation>", "<another observation>"],
+                "recommendations": ["<specific timing improvement>", "<another improvement>"]
+            },
+            "improvements": ["<key delivery improvement>", "<another key improvement>"],
+            "overallScore": <0-100>,
+            "overallFeedback": "<comprehensive evaluation of delivery style and specific ways to improve>"
+        }
+        
+        Focus on delivery techniques, speaking skills, and presentation effectiveness rather than content.
+        """
+        
+        let userPrompt = """
+        Analyze this pitch presentation and provide feedback in the specified JSON format:
+        
+        \(text)
+        """
+        
         let messages: [[String: String]] = [
-            ["role": "system", "content": "You are an expert pitch analyzer. Analyze the following pitch and provide detailed feedback."],
-            ["role": "user", "content": text]
+            ["role": "system", "content": systemPrompt],
+            ["role": "user", "content": userPrompt]
         ]
         
         let requestBody: [String: Any] = [
@@ -22,6 +90,8 @@ class OpenAIService {
             "messages": messages,
             "temperature": 0.7
         ]
+        
+        print("DEBUG: Request body: \(requestBody)")
         
         guard let url = URL(string: baseURL) else {
             throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
@@ -31,29 +101,103 @@ class OpenAIService {
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            print("DEBUG: Request headers: \(request.allHTTPHeaderFields ?? [:])")
+        } catch {
+            print("DEBUG: JSON serialization error: \(error)")
+            throw error
+        }
         
         print("DEBUG: Sending request to OpenAI")
         let (data, response) = try await URLSession.shared.data(for: request)
         
+        if let httpResponse = response as? HTTPURLResponse {
+            print("DEBUG: Response status code: \(httpResponse.statusCode)")
+            print("DEBUG: Response headers: \(httpResponse.allHeaderFields)")
+        }
+        
+        let responseString = String(data: data, encoding: .utf8) ?? "none"
+        print("DEBUG: Raw response: \(responseString)")
+        
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
-            print("DEBUG: API Error - Status Code: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let error = json["error"] as? [String: Any],
+               let message = error["message"] as? String {
+                print("DEBUG: OpenAI error message: \(message)")
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: message])
+            }
             throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to get response from OpenAI"])
         }
         
         print("DEBUG: Received response from OpenAI")
-        // Process the response and create PitchAnalysis
-        // Add your response parsing logic here
+        print("DEBUG: Raw response content: \(String(data: data, encoding: .utf8) ?? "none")")
         
-        return PitchAnalysis(
-            clarity: "Good clarity",
-            valueProposition: "Strong value proposition",
-            marketUnderstanding: "Good market understanding",
-            businessModel: "Viable business model",
-            improvements: "Some suggested improvements",
-            overallScore: 85
-        )
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let choices = json["choices"] as? [[String: Any]],
+           let firstChoice = choices.first,
+           let message = firstChoice["message"] as? [String: Any],
+           let content = message["content"] as? String {
+            
+            print("DEBUG: Parsing GPT response content")
+            guard let jsonData = content.data(using: .utf8) else {
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to convert content to data"])
+            }
+            
+            do {
+                let analysisData = try JSONDecoder().decode(GPTAnalysisResponse.self, from: jsonData)
+                print("DEBUG: Successfully parsed analysis data")
+                
+                return PitchAnalysis(
+                    clarity: PitchAnalysis.SectionAnalysis(
+                        score: analysisData.clarity.score,
+                        feedback: analysisData.clarity.feedback,
+                        examples: analysisData.clarity.examples,
+                        recommendations: analysisData.clarity.recommendations
+                    ),
+                    deliveryStyle: PitchAnalysis.SectionAnalysis(
+                        score: analysisData.deliveryStyle.score,
+                        feedback: analysisData.deliveryStyle.feedback,
+                        examples: analysisData.deliveryStyle.examples,
+                        recommendations: analysisData.deliveryStyle.recommendations
+                    ),
+                    communicationEffectiveness: PitchAnalysis.SectionAnalysis(
+                        score: analysisData.communicationEffectiveness.score,
+                        feedback: analysisData.communicationEffectiveness.feedback,
+                        examples: analysisData.communicationEffectiveness.examples,
+                        recommendations: analysisData.communicationEffectiveness.recommendations
+                    ),
+                    timeManagement: PitchAnalysis.SectionAnalysis(
+                        score: analysisData.timeManagement.score,
+                        feedback: analysisData.timeManagement.feedback,
+                        examples: analysisData.timeManagement.examples,
+                        recommendations: analysisData.timeManagement.recommendations
+                    ),
+                    improvements: analysisData.improvements,
+                    overallScore: analysisData.overallScore,
+                    overallFeedback: analysisData.overallFeedback
+                )
+            } catch {
+                print("DEBUG: JSON parsing error: \(error)")
+                throw error
+            }
+        }
+        
+        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse OpenAI response"])
+    }
+    
+    private func extractSection(_ content: String, _ section: String) -> String {
+        // Add logic to extract and format specific sections from the GPT response
+        // This should return detailed feedback with examples
+        return ""  // Implement proper extraction
+    }
+    
+    private func calculateOverallScore(from content: String) -> Int {
+        // Add logic to calculate overall score based on individual scores
+        // This should weight different aspects appropriately
+        return 0  // Implement proper calculation
     }
     
     func generatePitchSummary(pitchIdea: PitchIdea) async throws -> String {
@@ -134,4 +278,22 @@ class OpenAIService {
         
         throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse OpenAI response"])
     }
+}
+
+// Helper structure to parse GPT response
+private struct GPTAnalysisResponse: Codable {
+    struct Section: Codable {
+        let score: Int
+        let feedback: String
+        let examples: [String]
+        let recommendations: [String]
+    }
+    
+    let clarity: Section
+    let deliveryStyle: Section
+    let communicationEffectiveness: Section
+    let timeManagement: Section
+    let improvements: [String]
+    let overallScore: Int
+    let overallFeedback: String
 } 

@@ -209,11 +209,7 @@ private struct ReviewSection: View {
             .frame(maxHeight: 200)
             
             VStack(spacing: 12) {
-                Button(action: {
-                    print("DEBUG: VoiceRecordingView - Confirm button pressed with transcription: \(transcription)")
-                    viewModel.pitchIdea.pitchText = transcription
-                    viewModel.moveToNextStep()
-                }) {
+                Button(action: onConfirm) {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                         Text("Confirm Details")

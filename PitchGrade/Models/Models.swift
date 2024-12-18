@@ -11,13 +11,21 @@ struct PitchIdea: Codable {
     var pitchText: String = ""
 }
 
-struct PitchAnalysis: Codable {
-    let clarity: String
-    let valueProposition: String
-    let marketUnderstanding: String
-    let businessModel: String
-    let improvements: String
+struct PitchAnalysis: Codable, Equatable {
+    struct SectionAnalysis: Codable, Equatable {
+        let score: Int
+        let feedback: String
+        let examples: [String]
+        let recommendations: [String]
+    }
+    
+    let clarity: SectionAnalysis
+    let deliveryStyle: SectionAnalysis
+    let communicationEffectiveness: SectionAnalysis
+    let timeManagement: SectionAnalysis
+    let improvements: [String]
     let overallScore: Int
+    let overallFeedback: String
 }
 
 struct SavedPitch: Identifiable, Codable {
