@@ -19,7 +19,7 @@ struct OnboardingView: View {
             )
             .tag(1)
             
-            AuthenticationView()
+            AuthenticationView(mode: .signUp)
                 .tag(2)
         }
         .tabViewStyle(.page)

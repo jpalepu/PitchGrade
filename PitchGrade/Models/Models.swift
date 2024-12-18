@@ -12,20 +12,19 @@ struct PitchIdea: Codable {
 }
 
 struct PitchAnalysis: Codable, Equatable {
-    struct SectionAnalysis: Codable, Equatable {
+    let overallScore: Int
+    let overallFeedback: String
+    let sections: [Section]
+    let improvements: [String]
+    
+    struct Section: Codable, Equatable, Identifiable {
+        let id = UUID()
+        let title: String
         let score: Int
         let feedback: String
         let examples: [String]
         let recommendations: [String]
     }
-    
-    let clarity: SectionAnalysis
-    let deliveryStyle: SectionAnalysis
-    let communicationEffectiveness: SectionAnalysis
-    let timeManagement: SectionAnalysis
-    let improvements: [String]
-    let overallScore: Int
-    let overallFeedback: String
 }
 
 struct SavedPitch: Identifiable, Codable {

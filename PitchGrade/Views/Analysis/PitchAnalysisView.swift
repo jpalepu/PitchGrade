@@ -2,75 +2,72 @@ import SwiftUI
 
 struct PitchAnalysisView: View {
     let analysis: PitchAnalysis
-    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // Header with score
-                VStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .fill(scoreColor)
-                            .frame(width: 120, height: 120)
-                        
-                        VStack {
-                            Text("\(analysis.overallScore)")
-                                .font(.system(size: 40, weight: .bold))
-                            Text("Score")
-                                .font(.subheadline)
-                        }
-                        .foregroundColor(.white)
-                    }
+                // Overall Score
+                VStack(spacing: 8) {
+                    Text("Overall Score")
+                        .font(.headline)
                     
-                    Text("Pitch Analysis")
-                        .font(.title2.bold())
+                    Text("\(analysis.overallScore)")
+                        .font(.system(size: 48, weight: .bold))
+                        .foregroundColor(scoreColor(analysis.overallScore))
+                }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+                
+                // Overall Feedback
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Overall Feedback")
+                        .font(.headline)
                     
                     Text(analysis.overallFeedback)
-                        .font(.body)
                         .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
                 }
-                .padding(.top)
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
                 
-                // Analysis sections
-                VStack(spacing: 16) {
-                    AnalysisDetailSection(
-                        title: "Clarity & Structure",
-                        analysis: analysis.clarity,
-                        icon: "text.alignleft"
-                    )
-                    
-                    AnalysisDetailSection(
-                        title: "Delivery Style",
-                        analysis: analysis.deliveryStyle,
-                        icon: "person.fill.viewfinder"
-                    )
-                    
-                    AnalysisDetailSection(
-                        title: "Communication",
-                        analysis: analysis.communicationEffectiveness,
-                        icon: "message.fill"
-                    )
-                    
-                    AnalysisDetailSection(
-                        title: "Time Management",
-                        analysis: analysis.timeManagement,
-                        icon: "clock.fill"
-                    )
-                    
-                    ImprovementsSection(improvements: analysis.improvements)
+                // Sections Analysis
+                ForEach(analysis.sections) { section in
+                    SectionAnalysisCard(section: section)
                 }
-                .padding(.horizontal)
+                
+                // Improvements
+                if !analysis.improvements.isEmpty {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Areas for Improvement")
+                            .font(.headline)
+                        
+                        ForEach(analysis.improvements, id: \.self) { improvement in
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .foregroundColor(.orange)
+                                    .font(.system(size: 14))
+                                
+                                Text(improvement)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                }
             }
+            .padding()
         }
         .background(Color(.systemGroupedBackground))
-        .navigationBarTitleDisplayMode(.inline)
     }
     
-    private var scoreColor: Color {
-        switch analysis.overallScore {
+    private func scoreColor(_ score: Int) -> Color {
+        switch score {
         case 80...100: return .green
         case 60..<80: return .orange
         default: return .red
@@ -78,59 +75,44 @@ struct PitchAnalysisView: View {
     }
 }
 
-private struct AnalysisDetailSection: View {
-    let title: String
-    let analysis: PitchAnalysis.SectionAnalysis
-    let icon: String
+struct SectionAnalysisCard: View {
+    let section: PitchAnalysis.Section
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Image(systemName: icon)
-                    .foregroundColor(.blue)
-                    .font(.system(size: 20))
-                
-                Text(title)
+                Text(section.title)
                     .font(.headline)
                 
                 Spacer()
                 
-                ScoreTag(score: analysis.score)
+                Text("\(section.score)")
+                    .font(.headline)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(scoreColor(section.score))
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
             }
             
-            Text(analysis.feedback)
-                .font(.body)
+            Text(section.feedback)
+                .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            if !analysis.examples.isEmpty {
-                ExamplesView(examples: analysis.examples)
+            if !section.examples.isEmpty {
+                ExamplesView(examples: section.examples)
             }
             
-            if !analysis.recommendations.isEmpty {
-                RecommendationsView(recommendations: analysis.recommendations)
+            if !section.recommendations.isEmpty {
+                RecommendationsView(recommendations: section.recommendations)
             }
         }
         .padding()
         .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 10)
-    }
-}
-
-private struct ScoreTag: View {
-    let score: Int
-    
-    var body: some View {
-        Text("\(score)")
-            .font(.system(.caption, design: .rounded).bold())
-            .foregroundColor(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(scoreColor)
-            .cornerRadius(8)
+        .cornerRadius(12)
     }
     
-    private var scoreColor: Color {
+    private func scoreColor(_ score: Int) -> Color {
         switch score {
         case 80...100: return .green
         case 60..<80: return .orange
@@ -146,7 +128,6 @@ private struct ExamplesView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Examples")
                 .font(.subheadline.bold())
-                .foregroundColor(.primary)
             
             ForEach(examples, id: \.self) { example in
                 HStack(alignment: .top, spacing: 8) {
@@ -173,7 +154,6 @@ private struct RecommendationsView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Recommendations")
                 .font(.subheadline.bold())
-                .foregroundColor(.primary)
             
             ForEach(recommendations, id: \.self) { recommendation in
                 HStack(alignment: .top, spacing: 8) {
@@ -190,38 +170,5 @@ private struct RecommendationsView: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(8)
-    }
-}
-
-private struct ImprovementsSection: View {
-    let improvements: [String]
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "arrow.up.circle.fill")
-                    .foregroundColor(.orange)
-                    .font(.system(size: 20))
-                
-                Text("Key Areas for Improvement")
-                    .font(.headline)
-            }
-            
-            ForEach(improvements, id: \.self) { improvement in
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "exclamationmark.circle.fill")
-                        .foregroundColor(.orange)
-                        .font(.system(size: 14))
-                    
-                    Text(improvement)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 10)
     }
 } 

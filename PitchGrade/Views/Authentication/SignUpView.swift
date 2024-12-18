@@ -1,67 +1,27 @@
 import SwiftUI
 
-struct AuthenticationView: View {
-    enum Mode {
-        case signIn, signUp
-        
-        var title: String {
-            switch self {
-            case .signIn: return "Welcome Back"
-            case .signUp: return "Create Account"
-            }
-        }
-        
-        var subtitle: String {
-            switch self {
-            case .signIn: return "Sign in to continue"
-            case .signUp: return "Choose how you want to register"
-            }
-        }
-        
-        var googleButtonText: String {
-            switch self {
-            case .signIn: return "Sign in with Google"
-            case .signUp: return "Sign up with Google"
-            }
-        }
-        
-        var emailButtonText: String {
-            switch self {
-            case .signIn: return "Sign in with Email"
-            case .signUp: return "Sign up with Email"
-            }
-        }
-        
-        var switchModeText: String {
-            switch self {
-            case .signIn: return "Don't have an account? Sign Up"
-            case .signUp: return "Already have an account? Sign In"
-            }
-        }
-    }
-    
-    let mode: Mode
+struct SignUpView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var authViewModel: AuthViewModel
-    @State private var showEmailAuth = false
+    @State private var showEmailSignUp = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 32) {
                 // Header
                 VStack(spacing: 8) {
-                    Text(mode.title)
+                    Text("Create Account")
                         .font(.title2.bold())
                     
-                    Text(mode.subtitle)
+                    Text("Choose how you want to register")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 .padding(.top, 40)
                 
-                // Auth Options
+                // Sign Up Options
                 VStack(spacing: 16) {
-                    // Google Auth
+                    // Google Sign Up
                     Button {
                         Task {
                             await authViewModel.signInWithGoogle()
@@ -73,7 +33,7 @@ struct AuthenticationView: View {
                                 .scaledToFit()
                                 .frame(width: 24, height: 24)
                             
-                            Text(mode.googleButtonText)
+                            Text("Sign up with Google")
                                 .font(.headline)
                         }
                         .frame(maxWidth: .infinity)
@@ -83,15 +43,15 @@ struct AuthenticationView: View {
                         .shadow(color: .black.opacity(0.05), radius: 8, y: 4)
                     }
                     
-                    // Email Auth
+                    // Email Sign Up
                     Button {
-                        showEmailAuth = true
+                        showEmailSignUp = true
                     } label: {
                         HStack {
                             Image(systemName: "envelope.fill")
                                 .foregroundColor(.accentColor)
                             
-                            Text(mode.emailButtonText)
+                            Text("Sign up with Email")
                                 .font(.headline)
                         }
                         .frame(maxWidth: .infinity)
@@ -105,26 +65,19 @@ struct AuthenticationView: View {
                 
                 Spacer()
                 
-                // Switch Mode Button
+                // Sign In Link
                 Button {
                     dismiss()
                 } label: {
-                    Text(mode.switchModeText)
+                    Text("Already have an account? Sign In")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 .padding(.bottom)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-            .sheet(isPresented: $showEmailAuth) {
-                EmailAuthView(mode: mode)
+            .sheet(isPresented: $showEmailSignUp) {
+                EmailAuthView(mode: .signUp)
                     .environmentObject(authViewModel)
             }
         }

@@ -1,40 +1,19 @@
 import SwiftUI
 
 struct PitchHistoryView: View {
-    @State private var searchText = ""
     @EnvironmentObject private var viewModel: PitchViewModel
     
     var body: some View {
-        ZStack {
-            Color(.systemBackground)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 20) {
-                // Search bar
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                    
-                    TextField("Search pitches...", text: $searchText)
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .padding(.horizontal)
-                
-                // History list
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(viewModel.savedPitches) { pitch in
-                            PitchHistoryCard(pitch: pitch)
-                        }
-                    }
-                    .padding()
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(viewModel.savedPitches) { pitch in
+                    PitchHistoryCard(pitch: pitch)
                 }
             }
-            .padding(.top)
+            .padding()
         }
-        .navigationTitle("Pitch History")
+        .navigationTitle("History")
+        .background(Color(.systemGroupedBackground))
     }
 }
 
@@ -43,56 +22,33 @@ struct PitchHistoryCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(pitch.businessName)
-                        .font(.headline)
-                    
-                    Text(pitch.date.formatted(date: .abbreviated, time: .shortened))
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                ZStack {
-                    Circle()
-                        .fill(scoreColor)
-                        .frame(width: 40, height: 40)
-                    
-                    Text("\(pitch.score)")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                }
-            }
+            Text(pitch.businessName)
+                .font(.headline)
             
             Text(pitch.summary)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
-                .lineLimit(2)
+                .lineLimit(3)
             
             HStack {
-                Image(systemName: pitch.mode == .camera ? "doc.text.fill" : "waveform")
-                    .foregroundColor(.blue)
-                
-                Text(pitch.mode == .camera ? "Document" : "Voice")
+                Text(pitch.date.formatted(.dateTime.month().day()))
                     .font(.caption)
-                    .foregroundColor(.blue)
+                    .foregroundColor(.secondary)
                 
                 Spacer()
                 
-                Button {
-                    // View details action
-                } label: {
-                    Text("View Details")
-                        .font(.caption)
-                        .foregroundColor(.blue)
-                }
+                Text("Score: \(pitch.score)")
+                    .font(.caption.bold())
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(scoreColor.opacity(0.2))
+                    .foregroundColor(scoreColor)
+                    .cornerRadius(8)
             }
         }
         .padding()
         .background(Color(.systemBackground))
-        .cornerRadius(16)
+        .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 8)
     }
     

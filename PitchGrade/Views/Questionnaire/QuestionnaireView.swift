@@ -21,10 +21,34 @@ struct QuestionnaireView: View {
         Question(field: "businessModel", title: "Business Model", description: "How will you make money?", icon: "chart.line.uptrend.xyaxis")
     ]
     
+    private var isLastQuestion: Bool {
+        currentQuestion == questions.count - 1
+    }
+    
+    private var isCurrentQuestionAnswered: Bool {
+        !(answers[questions[currentQuestion].field]?.isEmpty ?? true)
+    }
+    
+    private func previousQuestion() {
+        withAnimation(.spring()) {
+            currentQuestion -= 1
+        }
+    }
+    
+    private func nextQuestion() {
+        withAnimation(.spring()) {
+            if isLastQuestion {
+                saveAnswers()
+                viewModel.moveToNextStep()
+            } else {
+                currentQuestion += 1
+            }
+        }
+    }
+    
     var body: some View {
         ZStack {
-            Color(.systemBackground)
-                .ignoresSafeArea()
+            Color(.systemBackground).ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // Progress bar
@@ -64,48 +88,64 @@ struct QuestionnaireView: View {
                         )
                     }
                     .padding()
+                    
+                    // Add extra padding at bottom for navigation buttons
+                    Color.clear.frame(height: 120)
                 }
                 
-                // Fixed navigation buttons at the bottom with proper spacing
+                // Fixed navigation buttons at the bottom
                 VStack(spacing: 0) {
-                    // Navigation buttons
-                    HStack(spacing: 20) {
+                    Divider()
+                    
+                    HStack(spacing: 16) {
                         if currentQuestion > 0 {
-                            NavigationButton(
-                                title: "Previous",
-                                icon: "chevron.left"
-                            ) {
-                                currentQuestion -= 1
+                            Button(action: previousQuestion) {
+                                HStack {
+                                    Image(systemName: "chevron.left")
+                                    Text("Back")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color(.systemBackground))
+                                .foregroundColor(.primary)
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                )
                             }
                         }
                         
-                        NavigationButton(
-                            title: currentQuestion == questions.count - 1 ? "Review" : "Next",
-                            icon: "chevron.right",
-                            isEnabled: !(answers[questions[currentQuestion].field]?.isEmpty ?? true)
-                        ) {
-                            if currentQuestion == questions.count - 1 {
-                                saveAnswers()
-                                viewModel.moveToNextStep()
-                            } else {
-                                currentQuestion += 1
+                        Button(action: nextQuestion) {
+                            HStack {
+                                Text(isLastQuestion ? "Finish" : "Next")
+                                if !isLastQuestion {
+                                    Image(systemName: "chevron.right")
+                                }
                             }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(isCurrentQuestionAnswered ? Color.accentColor : Color.gray.opacity(0.3))
+                            )
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
                         }
+                        .disabled(!isCurrentQuestionAnswered)
                     }
                     .padding(.horizontal)
                     .padding(.vertical, 12)
                     .background(
-                        Rectangle()
-                            .fill(.ultraThinMaterial)
+                        Color(.systemBackground)
+                            .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
                     )
-                    
-                    // Spacer for tab bar
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frame(height: 80) // Height for tab bar space
                 }
+                // Add safe area padding at the bottom
+                .padding(.bottom, UIApplication.shared.windows.first?.safeAreaInsets.bottom ?? 0)
             }
         }
+        .navigationBarTitleDisplayMode(.inline)
     }
     
     private func saveAnswers() {
